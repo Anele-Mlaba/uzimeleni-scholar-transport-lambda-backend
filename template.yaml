@@ -1,0 +1,297 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Uzimeleni Scholar Transport - Lambda Backend API
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.12
+    CodeUri: src/
+    Tracing: Active
+    LoggingConfig:
+      LogFormat: JSON
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref DynamoTableName
+        PAYFAST_MERCHANT_ID: !Ref PayFastMerchantId
+        PAYFAST_MERCHANT_KEY: !Ref PayFastMerchantKey
+        PAYFAST_PASSPHRASE: !Ref PayFastPassphrase
+        PAYFAST_SANDBOX: !Ref PayFastSandbox
+        API_BASE_URL: !Sub "https://${TransportApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/prod"
+  Api:
+    TracingEnabled: true
+
+Parameters:
+  DynamoTableName:
+    Type: String
+    Default: uzimeleni-transport
+    Description: Name of the DynamoDB table
+  PayFastMerchantId:
+    Type: String
+    Default: placeholder
+    NoEcho: true
+    Description: PayFast Merchant ID
+  PayFastMerchantKey:
+    Type: String
+    Default: placeholder
+    NoEcho: true
+    Description: PayFast Merchant Key
+  PayFastPassphrase:
+    Type: String
+    Default: placeholder
+    NoEcho: true
+    Description: PayFast Passphrase for signature generation
+  PayFastSandbox:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Use PayFast sandbox environment
+
+Resources:
+
+  # ── API Gateway ────────────────────────────────────────────────────────────
+  TransportApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Description: Uzimeleni Scholar Transport REST API
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
+        AllowOrigin: "'*'"
+
+  # ── Auth ───────────────────────────────────────────────────────────────────
+  AuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: auth.handler.lambda_handler
+      Description: POST /auth/login | POST /auth/register | POST /auth/logout
+      Events:
+        Login:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /auth/login
+            Method: post
+        Register:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /auth/register
+            Method: post
+        Logout:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /auth/logout
+            Method: post
+
+  # ── Owners ─────────────────────────────────────────────────────────────────
+  OwnersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: owners.handler.lambda_handler
+      Description: GET|POST /owners | GET|PUT|DELETE /owners/{id}
+      Events:
+        ListOwners:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /owners
+            Method: get
+        CreateOwner:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /owners
+            Method: post
+        GetOwner:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /owners/{id}
+            Method: get
+        UpdateOwner:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /owners/{id}
+            Method: put
+        DeleteOwner:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /owners/{id}
+            Method: delete
+
+  # ── Vehicles ───────────────────────────────────────────────────────────────
+  VehiclesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: vehicles.handler.lambda_handler
+      Description: GET|POST /vehicles | GET|PUT /vehicles/{reg_number}
+      Events:
+        ListVehicles:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /vehicles
+            Method: get
+        CreateVehicle:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /vehicles
+            Method: post
+        GetVehicle:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /vehicles/{reg_number}
+            Method: get
+        UpdateVehicle:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /vehicles/{reg_number}
+            Method: put
+
+  # ── Drivers ────────────────────────────────────────────────────────────────
+  DriversFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: drivers.handler.lambda_handler
+      Description: GET|POST /drivers | PUT /drivers/{id}
+      Events:
+        ListDrivers:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /drivers
+            Method: get
+        CreateDriver:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /drivers
+            Method: post
+        UpdateDriver:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /drivers/{id}
+            Method: put
+
+  # ── Meetings ───────────────────────────────────────────────────────────────
+  MeetingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: meetings.handler.lambda_handler
+      Description: GET|POST /meetings | PUT /meetings/{id} | POST /meetings/{id}/attendance
+      Events:
+        ListMeetings:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /meetings
+            Method: get
+        CreateMeeting:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /meetings
+            Method: post
+        UpdateMeeting:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /meetings/{id}
+            Method: put
+        RecordAttendance:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /meetings/{id}/attendance
+            Method: post
+
+  # ── Payments ───────────────────────────────────────────────────────────────
+  PaymentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: payments.handler.lambda_handler
+      Description: GET /payments | POST /payments/initiate | POST /payments/confirm (PayFast ITN)
+      Events:
+        ListPayments:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /payments
+            Method: get
+        InitiatePayment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /payments/initiate
+            Method: post
+        ConfirmPayment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /payments/confirm
+            Method: post
+
+  # ── Flags ──────────────────────────────────────────────────────────────────
+  FlagsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: flags.handler.lambda_handler
+      Description: GET|POST /flags
+      Events:
+        ListFlags:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /flags
+            Method: get
+        CreateFlag:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /flags
+            Method: post
+
+  # ── Search ─────────────────────────────────────────────────────────────────
+  SearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: search.handler.lambda_handler
+      Description: GET /search?reg_number=XXX | GET /search?id_number=XXX
+      Events:
+        Search:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /search
+            Method: get
+
+Outputs:
+  TransportApiUrl:
+    Description: API Gateway base URL
+    Value: !Sub "https://${TransportApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/prod/"
+  AuthFunctionArn:
+    Value: !GetAtt AuthFunction.Arn
+  OwnersFunctionArn:
+    Value: !GetAtt OwnersFunction.Arn
+  VehiclesFunctionArn:
+    Value: !GetAtt VehiclesFunction.Arn
+  DriversFunctionArn:
+    Value: !GetAtt DriversFunction.Arn
+  MeetingsFunctionArn:
+    Value: !GetAtt MeetingsFunction.Arn
+  PaymentsFunctionArn:
+    Value: !GetAtt PaymentsFunction.Arn
+  FlagsFunctionArn:
+    Value: !GetAtt FlagsFunction.Arn
+  SearchFunctionArn:
+    Value: !GetAtt SearchFunction.Arn

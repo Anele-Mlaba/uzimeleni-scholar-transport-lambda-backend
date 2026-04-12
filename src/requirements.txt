@@ -1,0 +1,2 @@
+# requests is used by the payments handler for PayFast integration
+requests>=2.31.0
