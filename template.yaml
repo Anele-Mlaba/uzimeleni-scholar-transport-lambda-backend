@@ -27,6 +27,10 @@ Parameters:
     Type: String
     Default: uzimeleni-transport
     Description: Name of the DynamoDB table
+  S3BucketName:
+    Type: String
+    Default: placeholder
+    Description: Name of the S3 bucket used for file storage
   PayFastMerchantId:
     Type: String
     Default: placeholder
@@ -275,6 +279,38 @@ Resources:
             Path: /search
             Method: get
 
+  # ── Files (S3 presigned URLs) ───────────────────────────────────────────────
+  FilesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: files.handler.lambda_handler
+      Description: GET /files (download) | POST /files (upload) | DELETE /files (delete) - S3 presigned URLs
+      Environment:
+        Variables:
+          S3_BUCKET_NAME: !Ref S3BucketName
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+      Events:
+        DownloadFile:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /files
+            Method: get
+        UploadFile:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /files
+            Method: post
+        DeleteFile:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /files
+            Method: delete
+
 Outputs:
   TransportApiUrl:
     Description: API Gateway base URL
@@ -295,3 +331,5 @@ Outputs:
     Value: !GetAtt FlagsFunction.Arn
   SearchFunctionArn:
     Value: !GetAtt SearchFunction.Arn
+  FilesFunctionArn:
+    Value: !GetAtt FilesFunction.Arn

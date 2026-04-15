@@ -1,0 +1,24 @@
+{
+  "httpMethod": "POST",
+  "path": "/files",
+  "resource": "/files",
+  "isBase64Encoded": false,
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "body": "{\"folder\":\"anele-madonda\",\"file\":\"Affiliate Agreement.pdf\",\"content_type\":\"application/pdf\"}",
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+  },
+  "requestContext": {
+    "accountId": "123456789012",
+    "resourceId": "123456",
+    "stage": "prod",
+    "requestId": "files-post-request-id",
+    "httpMethod": "POST",
+    "path": "/prod/files",
+    "resourcePath": "/files",
+    "apiId": "1234567890",
+    "protocol": "HTTP/1.1"
+  }
+}

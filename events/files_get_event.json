@@ -1,0 +1,27 @@
+{
+  "httpMethod": "GET",
+  "path": "/files",
+  "resource": "/files",
+  "isBase64Encoded": false,
+  "queryStringParameters": {
+    "folder": "anele-madonda",
+    "file": "Affiliate Agreement.pdf"
+  },
+  "pathParameters": null,
+  "body": null,
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+  },
+  "requestContext": {
+    "accountId": "123456789012",
+    "resourceId": "123456",
+    "stage": "prod",
+    "requestId": "files-get-request-id",
+    "httpMethod": "GET",
+    "path": "/prod/files",
+    "resourcePath": "/files",
+    "apiId": "1234567890",
+    "protocol": "HTTP/1.1"
+  }
+}

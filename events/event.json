@@ -1,6 +1,8 @@
 {
-  "body": "{\"message\": \"hello world\"}",
+  "body": "{\"message\":\"hello world\",\"folder\":\"anele-madonda\",\"file\":\"Affiliate Agreement.pdf\"}",
   "resource": "/hello",
+  "folder": "anele-madonda",
+  "file": "Affiliate Agreement.pdf",
   "path": "/hello",
   "httpMethod": "GET",
   "isBase64Encoded": false,

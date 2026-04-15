@@ -1,2 +1,4 @@
 # requests is used by the payments handler for PayFast integration
 requests>=2.31.0
+# boto3 is used by the files handler for S3 presigned URLs
+boto3>=1.34.0
