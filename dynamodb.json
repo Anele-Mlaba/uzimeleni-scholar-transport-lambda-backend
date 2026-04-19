@@ -1,0 +1,95 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Zimeleni Scholar Transport - DynamoDB Table",
+
+  "Parameters": {
+    "TableName": {
+      "Type": "String",
+      "Default": "zimeleni-transport",
+      "Description": "DynamoDB table name (must match TABLE_NAME in the Lambda stack)"
+    },
+    "Environment": {
+      "Type": "String",
+      "Default": "prod",
+      "AllowedValues": ["dev", "staging", "prod"],
+      "Description": "Deployment environment"
+    }
+  },
+
+  "Resources": {
+    "TransportTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "TableName": { "Ref": "TableName" },
+        "BillingMode": "PAY_PER_REQUEST",
+
+        "AttributeDefinitions": [
+          { "AttributeName": "pk",          "AttributeType": "S" },
+          { "AttributeName": "sk",          "AttributeType": "S" },
+          { "AttributeName": "entity_type", "AttributeType": "S" },
+          { "AttributeName": "created_at",  "AttributeType": "S" },
+          { "AttributeName": "reg_number",  "AttributeType": "S" },
+          { "AttributeName": "id_number",   "AttributeType": "S" }
+        ],
+
+        "KeySchema": [
+          { "AttributeName": "pk", "KeyType": "HASH"  },
+          { "AttributeName": "sk", "KeyType": "RANGE" }
+        ],
+
+        "GlobalSecondaryIndexes": [
+          {
+            "IndexName": "entity-type-index",
+            "KeySchema": [
+              { "AttributeName": "entity_type", "KeyType": "HASH"  },
+              { "AttributeName": "created_at",  "KeyType": "RANGE" }
+            ],
+            "Projection": { "ProjectionType": "ALL" }
+          },
+          {
+            "IndexName": "reg_number-index",
+            "KeySchema": [
+              { "AttributeName": "reg_number", "KeyType": "HASH" }
+            ],
+            "Projection": { "ProjectionType": "ALL" }
+          },
+          {
+            "IndexName": "id_number-index",
+            "KeySchema": [
+              { "AttributeName": "id_number", "KeyType": "HASH" }
+            ],
+            "Projection": { "ProjectionType": "ALL" }
+          }
+        ],
+
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true
+        },
+
+        "SSESpecification": {
+          "SSEEnabled": true
+        },
+
+        "Tags": [
+          { "Key": "Project",     "Value": "zimeleni-scholar-transport" },
+          { "Key": "Environment", "Value": { "Ref": "Environment" } }
+        ]
+      }
+    }
+  },
+
+  "Outputs": {
+    "TableName": {
+      "Description": "DynamoDB table name — pass this as TABLE_NAME when deploying the Lambda stack",
+      "Value": { "Ref": "TransportTable" },
+      "Export": { "Name": { "Fn::Sub": "${AWS::StackName}-TableName" } }
+    },
+    "TableArn": {
+      "Description": "DynamoDB table ARN — use this to grant Lambda IAM permissions",
+      "Value": { "Fn::GetAtt": ["TransportTable", "Arn"] },
+      "Export": { "Name": { "Fn::Sub": "${AWS::StackName}-TableArn" } }
+    }
+  }
+}

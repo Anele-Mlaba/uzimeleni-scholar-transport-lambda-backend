@@ -28,6 +28,10 @@ def not_found(message='Resource not found'):
     return _build(404, {'error': message})
 
 
+def conflict(message):
+    return _build(409, {'error': message})
+
+
 def method_not_allowed():
     return _build(405, {'error': 'Method not allowed'})
 

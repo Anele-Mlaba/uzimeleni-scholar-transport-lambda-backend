@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Uzimeleni Scholar Transport - Lambda Backend API
+Description: Zimeleni Scholar Transport - Lambda Backend API
 
 Globals:
   Function:
@@ -14,18 +14,18 @@ Globals:
     Environment:
       Variables:
         TABLE_NAME: !Ref DynamoTableName
+        JWT_SECRET: !Ref JwtSecret
         PAYFAST_MERCHANT_ID: !Ref PayFastMerchantId
         PAYFAST_MERCHANT_KEY: !Ref PayFastMerchantKey
         PAYFAST_PASSPHRASE: !Ref PayFastPassphrase
         PAYFAST_SANDBOX: !Ref PayFastSandbox
-        API_BASE_URL: !Sub "https://${TransportApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/prod"
   Api:
     TracingEnabled: true
 
 Parameters:
   DynamoTableName:
     Type: String
-    Default: uzimeleni-transport
+    Default: zimeleni-transport
     Description: Name of the DynamoDB table
   S3BucketName:
     Type: String
@@ -51,6 +51,11 @@ Parameters:
     Default: "true"
     AllowedValues: ["true", "false"]
     Description: Use PayFast sandbox environment
+  JwtSecret:
+    Type: String
+    Default: change-me-in-production
+    NoEcho: true
+    Description: Secret key used to sign JWT tokens
 
 Resources:
 
@@ -59,7 +64,7 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: prod
-      Description: Uzimeleni Scholar Transport REST API
+      Description: Zimeleni Scholar Transport REST API
       Cors:
         AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"

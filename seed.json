@@ -1,0 +1,109 @@
+{
+  "zimeleni-transport": [
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":          { "S": "OWNER#owner-001" },
+          "SK":          { "S": "PROFILE" },
+          "entity_type": { "S": "OWNER" },
+          "owner_id":    { "S": "owner-001" },
+          "name":        { "S": "Thabo Nkosi" },
+          "id_number":   { "S": "8501015800083" },
+          "phone":       { "S": "+27821234567" },
+          "email":       { "S": "thabo.nkosi@example.com" },
+          "address":     { "S": "12 Main Road, Soweto, 1804" },
+          "created_at":  { "S": "2025-01-10T08:00:00Z" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":             { "S": "DRIVER#driver-001" },
+          "SK":             { "S": "PROFILE" },
+          "entity_type":    { "S": "DRIVER" },
+          "driver_id":      { "S": "driver-001" },
+          "name":           { "S": "Sipho Dlamini" },
+          "id_number":      { "S": "9003025400082" },
+          "license_number": { "S": "DL-2024-00123" },
+          "license_expiry": { "S": "2027-03-31" },
+          "phone":          { "S": "+27831234567" },
+          "created_at":     { "S": "2025-01-10T08:05:00Z" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":          { "S": "VEHICLE#CA123GP" },
+          "SK":          { "S": "DETAILS" },
+          "entity_type": { "S": "VEHICLE" },
+          "reg_number":  { "S": "CA123GP" },
+          "make":        { "S": "Toyota" },
+          "model":       { "S": "Quantum" },
+          "year":        { "N": "2022" },
+          "owner_id":    { "S": "owner-001" },
+          "driver_id":   { "S": "driver-001" },
+          "created_at":  { "S": "2025-01-10T08:10:00Z" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":          { "S": "MEETING#meeting-001" },
+          "SK":          { "S": "DETAILS" },
+          "entity_type": { "S": "MEETING" },
+          "meeting_id":  { "S": "meeting-001" },
+          "title":       { "S": "Q1 Owner Briefing" },
+          "date":        { "S": "2025-02-01T09:00:00Z" },
+          "location":    { "S": "Zimeleni Office, 5 Transport Ave, Johannesburg" },
+          "agenda":      { "S": "Route updates, safety compliance, fee structure review" },
+          "created_at":  { "S": "2025-01-15T10:00:00Z" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":           { "S": "MEETING#meeting-001" },
+          "SK":           { "S": "ATTENDANCE#owner-001" },
+          "meeting_id":   { "S": "meeting-001" },
+          "attendee_id":  { "S": "owner-001" },
+          "recorded_at":  { "S": "2025-02-01T09:05:00Z" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":          { "S": "PAYMENT#payment-001" },
+          "SK":          { "S": "DETAILS" },
+          "entity_type": { "S": "PAYMENT" },
+          "payment_id":  { "S": "payment-001" },
+          "owner_id":    { "S": "owner-001" },
+          "amount":      { "N": "1500.00" },
+          "item_name":   { "S": "Monthly transport fee - January 2025" },
+          "status":      { "S": "complete" },
+          "created_at":  { "S": "2025-01-31T12:00:00Z" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK":                  { "S": "FLAG#flag-001" },
+          "SK":                  { "S": "DETAILS" },
+          "entity_type":         { "S": "FLAG" },
+          "flag_id":             { "S": "flag-001" },
+          "entity_id":           { "S": "CA123GP" },
+          "flagged_entity_type": { "S": "vehicle" },
+          "reason":              { "S": "Roadworthy certificate expired" },
+          "severity":            { "S": "high" },
+          "resolved":            { "BOOL": false },
+          "created_at":          { "S": "2025-02-05T14:00:00Z" }
+        }
+      }
+    }
+  ]
+}
