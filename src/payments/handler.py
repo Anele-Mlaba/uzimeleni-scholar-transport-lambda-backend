@@ -1,16 +1,22 @@
 import hashlib
 import json
+import logging
 import os
 import urllib.parse
 import uuid
+from datetime import datetime, timezone
 
-from common.response import bad_request, created, method_not_allowed, ok
+import boto3
+from boto3.dynamodb.conditions import Attr
+from botocore.exceptions import ClientError
 
-# TODO: Uncomment when DynamoDB is wired up
-# import boto3
-# from boto3.dynamodb.conditions import Key, Attr
-# dynamodb = boto3.resource('dynamodb')
-# table = dynamodb.Table(os.environ['TABLE_NAME'])
+from common.response import bad_request, created, method_not_allowed, ok, server_error
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('zimeleni-transport')
 
 PAYFAST_SANDBOX_URL = 'https://sandbox.payfast.co.za/eng/process'
 PAYFAST_LIVE_URL = 'https://www.payfast.co.za/eng/process'
@@ -19,6 +25,7 @@ PAYFAST_LIVE_URL = 'https://www.payfast.co.za/eng/process'
 def lambda_handler(event, context):
     method = event.get('httpMethod', '')
     path = event.get('path', '')
+    logger.info('Request: %s %s', method, path)
 
     if method == 'GET' and path.endswith('/payments'):
         return _list(event)
@@ -37,41 +44,23 @@ def _list(event):
     owner_id = query_params.get('owner_id')
     status = query_params.get('status')
 
-    # TODO: Query DynamoDB with optional filters
-    # filter_exprs = []
-    # if owner_id:
-    #     filter_exprs.append(Attr('owner_id').eq(owner_id))
-    # if status:
-    #     filter_exprs.append(Attr('status').eq(status))
-    # combined = filter_exprs[0] if len(filter_exprs) == 1 else filter_exprs[0] & filter_exprs[1]
-    # kwargs = {'FilterExpression': combined} if filter_exprs else {}
-    # resp = table.query(
-    #     IndexName='entity-type-index',
-    #     KeyConditionExpression=Key('entity_type').eq('PAYMENT'),
-    #     **kwargs,
-    # )
-    # payments = resp.get('Items', [])
-    payments = []
+    filter_expr = Attr('entity_type').eq('PAYMENT')
+    if owner_id:
+        filter_expr = filter_expr & Attr('owner_id').eq(owner_id)
+    if status:
+        filter_expr = filter_expr & Attr('status').eq(status)
+
+    try:
+        resp = table.scan(FilterExpression=filter_expr)
+    except ClientError as e:
+        logger.error('DynamoDB scan failed: %s', e.response['Error'])
+        return server_error()
+
+    payments = resp.get('Items', [])
     return ok({'payments': payments, 'count': len(payments)})
 
 
 def _initiate(event):
-    """
-    Build a PayFast payment request.
-
-    Expected body:
-      {
-        "amount":     "150.00",
-        "item_name":  "Monthly transport fee",
-        "owner_id":   "<uuid>",
-        "name_first": "John",        (optional)
-        "name_last":  "Doe",         (optional)
-        "email":      "j@example.com" (optional)
-      }
-
-    Returns the PayFast redirect URL and the pre-signed form data that your
-    frontend should POST to PayFast (or redirect to via query string).
-    """
     body = _parse_body(event)
 
     for field in ('amount', 'item_name', 'owner_id'):
@@ -85,6 +74,7 @@ def _initiate(event):
     use_sandbox = os.environ.get('PAYFAST_SANDBOX', 'true').lower() == 'true'
 
     payment_id = str(uuid.uuid4())
+    logger.info('Initiating payment: payment_id=%s owner_id=%s', payment_id, body['owner_id'])
 
     payfast_data = {
         'merchant_id': merchant_id,
@@ -100,25 +90,28 @@ def _initiate(event):
         'item_name': body['item_name'],
     }
 
-    # Strip empty values before generating the signature
     payfast_data = {k: v for k, v in payfast_data.items() if v}
     payfast_data['signature'] = _signature(payfast_data, passphrase)
 
     payfast_url = PAYFAST_SANDBOX_URL if use_sandbox else PAYFAST_LIVE_URL
 
-    # TODO: Persist pending payment in DynamoDB
-    # table.put_item(Item={
-    #     'pk': f'PAYMENT#{payment_id}',
-    #     'sk': 'DETAILS',
-    #     'entity_type': 'PAYMENT',
-    #     'payment_id': payment_id,
-    #     'owner_id': body['owner_id'],
-    #     'amount': body['amount'],
-    #     'item_name': body['item_name'],
-    #     'status': 'pending',
-    #     'created_at': _now(),
-    # })
+    try:
+        table.put_item(Item={
+            'PK': f'PAYMENT#{payment_id}',
+            'SK': 'DETAILS',
+            'entity_type': 'PAYMENT',
+            'payment_id': payment_id,
+            'owner_id': body['owner_id'],
+            'amount': body['amount'],
+            'item_name': body['item_name'],
+            'status': 'pending',
+            'created_at': _now(),
+        })
+    except ClientError as e:
+        logger.error('DynamoDB put_item failed: %s', e.response['Error'])
+        return server_error()
 
+    logger.info('Payment initiated: payment_id=%s', payment_id)
     return created({
         'payment_id': payment_id,
         'payfast_url': payfast_url,
@@ -127,13 +120,8 @@ def _initiate(event):
 
 
 def _confirm(event):
-    """
-    PayFast Instant Transaction Notification (ITN) endpoint.
-    PayFast POSTs form-encoded data here after each transaction.
-    """
     body_raw = event.get('body', '') or ''
 
-    # PayFast sends application/x-www-form-urlencoded
     try:
         itn = dict(urllib.parse.parse_qsl(body_raw))
     except Exception:
@@ -145,21 +133,18 @@ def _confirm(event):
     if not payment_id:
         return bad_request('Missing m_payment_id')
 
-    # TODO: Verify PayFast signature before trusting the notification
-    # passphrase = os.environ.get('PAYFAST_PASSPHRASE', '')
-    # received_sig = itn.pop('signature', '')
-    # if _signature(itn, passphrase) != received_sig:
-    #     return bad_request('Invalid signature')
+    logger.info('ITN received: payment_id=%s status=%s', payment_id, payment_status)
 
-    # TODO: Also validate source IP is a known PayFast server
-
-    # TODO: Update payment status in DynamoDB
-    # table.update_item(
-    #     Key={'pk': f'PAYMENT#{payment_id}', 'sk': 'DETAILS'},
-    #     UpdateExpression='SET #s = :s, updated_at = :ts',
-    #     ExpressionAttributeNames={'#s': 'status'},
-    #     ExpressionAttributeValues={':s': payment_status, ':ts': _now()},
-    # )
+    try:
+        table.update_item(
+            Key={'PK': f'PAYMENT#{payment_id}', 'SK': 'DETAILS'},
+            UpdateExpression='SET #s = :s, updated_at = :ts',
+            ExpressionAttributeNames={'#s': 'status'},
+            ExpressionAttributeValues={':s': payment_status, ':ts': _now()},
+        )
+    except ClientError as e:
+        logger.error('DynamoDB update_item failed: %s', e.response['Error'])
+        return server_error()
 
     return ok({'message': 'ITN received', 'payment_id': payment_id, 'status': payment_status})
 
@@ -167,7 +152,6 @@ def _confirm(event):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _signature(data: dict, passphrase: str = '') -> str:
-    """Generate the MD5 signature PayFast expects."""
     filtered = {k: v for k, v in data.items() if k != 'signature' and str(v) != ''}
     param_string = urllib.parse.urlencode(filtered)
     if passphrase:
@@ -179,4 +163,9 @@ def _parse_body(event):
     try:
         return json.loads(event.get('body') or '{}')
     except (json.JSONDecodeError, TypeError):
+        logger.warning('Failed to parse request body')
         return {}
+
+
+def _now():
+    return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')

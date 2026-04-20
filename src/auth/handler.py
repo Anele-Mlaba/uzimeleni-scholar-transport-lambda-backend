@@ -16,7 +16,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table(os.environ['TABLE_NAME'])
+table = dynamodb.Table('zimeleni-transport')
 
 
 def lambda_handler(event, context):
@@ -110,6 +110,7 @@ def _register(event):
             'id_number': id_number,
             'name': body['name'],
             'password_hash': _hash(body['password']),
+            'role': 'owner',
             'created_at': _now(),
         })
     except ClientError as e:

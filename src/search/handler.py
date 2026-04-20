@@ -1,15 +1,23 @@
-from common.response import bad_request, method_not_allowed, ok
+import logging
 
-# TODO: Uncomment when DynamoDB is wired up
-# import os
-# import boto3
-# from boto3.dynamodb.conditions import Key
-# dynamodb = boto3.resource('dynamodb')
-# table = dynamodb.Table(os.environ['TABLE_NAME'])
+import boto3
+from boto3.dynamodb.conditions import Key
+from botocore.exceptions import ClientError
+
+from common.response import bad_request, method_not_allowed, ok, server_error
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('zimeleni-transport')
 
 
 def lambda_handler(event, context):
-    if event.get('httpMethod', '') != 'GET':
+    method = event.get('httpMethod', '')
+    logger.info('Request: %s /search', method)
+
+    if method != 'GET':
         return method_not_allowed()
 
     return _search(event)
@@ -18,11 +26,6 @@ def lambda_handler(event, context):
 # ── Handlers ──────────────────────────────────────────────────────────────────
 
 def _search(event):
-    """
-    Supports two mutually exclusive query parameters:
-      GET /search?reg_number=GP123456  → search vehicles by registration number
-      GET /search?id_number=8901015009087 → search owners/drivers by SA ID number
-    """
     query_params = event.get('queryStringParameters') or {}
     reg_number = query_params.get('reg_number', '').strip()
     id_number = query_params.get('id_number', '').strip()
@@ -36,40 +39,30 @@ def _search(event):
 
 
 def _by_reg_number(reg_number):
-    """
-    Look up a vehicle (and its linked owner/driver) by registration number.
-    Requires a GSI on reg_number in DynamoDB.
-    """
-    # TODO: Query DynamoDB GSI
-    # resp = table.query(
-    #     IndexName='reg_number-index',
-    #     KeyConditionExpression=Key('reg_number').eq(reg_number.upper()),
-    # )
-    # results = resp.get('Items', [])
-    results = []  # placeholder
+    logger.info('Search by reg_number=%s', reg_number)
+    try:
+        resp = table.query(
+            IndexName='reg_number-index',
+            KeyConditionExpression=Key('reg_number').eq(reg_number.upper()),
+        )
+    except ClientError as e:
+        logger.error('DynamoDB query failed: %s', e.response['Error'])
+        return server_error()
 
-    return ok({
-        'query': {'reg_number': reg_number},
-        'results': results,
-        'count': len(results),
-    })
+    results = resp.get('Items', [])
+    return ok({'query': {'reg_number': reg_number}, 'results': results, 'count': len(results)})
 
 
 def _by_id_number(id_number):
-    """
-    Look up an owner or driver by South African ID number.
-    Requires a GSI on id_number in DynamoDB.
-    """
-    # TODO: Query DynamoDB GSI (covers both OWNER and DRIVER entity types)
-    # resp = table.query(
-    #     IndexName='id_number-index',
-    #     KeyConditionExpression=Key('id_number').eq(id_number),
-    # )
-    # results = resp.get('Items', [])
-    results = []  # placeholder
+    logger.info('Search by id_number=%s', id_number)
+    try:
+        resp = table.query(
+            IndexName='id_number-index',
+            KeyConditionExpression=Key('id_number').eq(id_number),
+        )
+    except ClientError as e:
+        logger.error('DynamoDB query failed: %s', e.response['Error'])
+        return server_error()
 
-    return ok({
-        'query': {'id_number': id_number},
-        'results': results,
-        'count': len(results),
-    })
+    results = resp.get('Items', [])
+    return ok({'query': {'id_number': id_number}, 'results': results, 'count': len(results)})
