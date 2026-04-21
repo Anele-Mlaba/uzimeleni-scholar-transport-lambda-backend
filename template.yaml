@@ -197,7 +197,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: meetings.handler.lambda_handler
-      Description: GET|POST /meetings | PUT /meetings/{id} | POST /meetings/{id}/attendance
+      Description: GET|POST /meetings | GET|PUT|DELETE /meetings/{id} | POST /meetings/{id}/attendance
       Events:
         ListMeetings:
           Type: Api
@@ -211,12 +211,24 @@ Resources:
             RestApiId: !Ref TransportApi
             Path: /meetings
             Method: post
+        GetMeeting:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /meetings/{id}
+            Method: get
         UpdateMeeting:
           Type: Api
           Properties:
             RestApiId: !Ref TransportApi
             Path: /meetings/{id}
             Method: put
+        DeleteMeeting:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /meetings/{id}
+            Method: delete
         RecordAttendance:
           Type: Api
           Properties:

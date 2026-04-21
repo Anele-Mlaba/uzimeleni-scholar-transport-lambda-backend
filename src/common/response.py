@@ -1,4 +1,13 @@
 import json
+from decimal import Decimal
+
+
+class _DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Decimal):
+            return int(o) if o % 1 == 0 else float(o)
+        return super().default(o)
+
 
 _CORS_HEADERS = {
     'Content-Type': 'application/json',
@@ -44,5 +53,5 @@ def _build(status_code, body):
     return {
         'statusCode': status_code,
         'headers': _CORS_HEADERS,
-        'body': json.dumps(body),
+        'body': json.dumps(body, cls=_DecimalEncoder),
     }
