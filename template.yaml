@@ -197,7 +197,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: meetings.handler.lambda_handler
-      Description: GET|POST /meetings | GET|PUT|DELETE /meetings/{id} | POST /meetings/{id}/attendance
+      Description: GET|POST /meetings | GET|PUT|DELETE /meetings/{id} | POST /meetings/{id}/attendance | GET|POST /meetings/{id}/minutes
       Events:
         ListMeetings:
           Type: Api
@@ -235,6 +235,24 @@ Resources:
             RestApiId: !Ref TransportApi
             Path: /meetings/{id}/attendance
             Method: post
+        SaveMinutes:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /meetings/{id}/minutes
+            Method: post
+        GetMinutes:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /meetings/{id}/minutes
+            Method: get
+        LockMeeting:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /meetings/{id}/lock
+            Method: put
 
   # ── Payments ───────────────────────────────────────────────────────────────
   PaymentsFunction:
@@ -260,6 +278,50 @@ Resources:
           Properties:
             RestApiId: !Ref TransportApi
             Path: /payments/confirm
+            Method: post
+
+  # ── Manual Payments ────────────────────────────────────────────────────────
+  ManualPaymentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: manual_payments.handler.lambda_handler
+      Description: GET|POST /manual-payments | POST /manual-payments/bulk | GET|DELETE /manual-payments/{id} | PUT /manual-payments/{id}/pay
+      Events:
+        ListManualPayments:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /manual-payments
+            Method: get
+        CreateManualPayment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /manual-payments
+            Method: post
+        GetManualPayment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /manual-payments/{id}
+            Method: get
+        MarkManualPaymentPaid:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /manual-payments/{id}/pay
+            Method: put
+        CancelManualPayment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /manual-payments/{id}
+            Method: delete
+        BulkCreateManualPayments:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TransportApi
+            Path: /manual-payments/bulk
             Method: post
 
   # ── Flags ──────────────────────────────────────────────────────────────────
@@ -344,6 +406,8 @@ Outputs:
     Value: !GetAtt MeetingsFunction.Arn
   PaymentsFunctionArn:
     Value: !GetAtt PaymentsFunction.Arn
+  ManualPaymentsFunctionArn:
+    Value: !GetAtt ManualPaymentsFunction.Arn
   FlagsFunctionArn:
     Value: !GetAtt FlagsFunction.Arn
   SearchFunctionArn:

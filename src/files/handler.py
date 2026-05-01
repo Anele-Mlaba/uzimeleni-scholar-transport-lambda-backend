@@ -32,9 +32,9 @@ def _get_download_url(event):
     folder = params.get('folder', '').strip()
     file = params.get('file', '').strip()
 
-    print("----------------------")
-    print(folder)
-    print(file)
+    if folder and not file:
+        return _list_files(folder)
+
     err = _require_path(folder, file)
     if err:
         return bad_request(err)
@@ -114,6 +114,25 @@ def _get_delete_url(event):
         return server_error(e.response['Error']['Message'])
 
     return ok({'url': url, 'key': key, 'expires_in': EXPIRY, 'action': 'delete'})
+
+
+def _list_files(folder):
+    prefix = folder.rstrip('/') + '/'
+    try:
+        resp = s3.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
+    except ClientError as e:
+        return server_error(e.response['Error']['Message'])
+
+    files = [
+        {
+            'name': obj['Key'][len(prefix):],
+            'size': obj['Size'],
+            'last_modified': obj['LastModified'].strftime('%Y-%m-%dT%H:%M:%SZ'),
+        }
+        for obj in resp.get('Contents', [])
+        if obj['Key'] != prefix
+    ]
+    return ok({'files': files})
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
